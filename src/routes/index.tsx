@@ -37,6 +37,29 @@ import { ProductModal } from "@/components/product-modal";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
+  loader: async () => {
+    try {
+      const [profile, socials, services, products] = await Promise.all([
+        getProfileFn(),
+        getSocialsFn(),
+        getServicesFn(),
+        getProductsFn(),
+      ]);
+      return {
+        profile,
+        socials: socials || [],
+        services: services || [],
+        products: products || [],
+      };
+    } catch {
+      return {
+        profile: null,
+        socials: [],
+        services: [],
+        products: [],
+      };
+    }
+  },
   component: Home,
 });
 
@@ -68,15 +91,32 @@ function Icon({ name, className }: { name: string; className?: string }) {
 }
 
 function Home() {
-  const { data: profile, isLoading: isProfileLoading } = useQuery({ queryKey: ["profile"], queryFn: () => getProfileFn() });
-  const { data: socials = [], isLoading: isSocialsLoading } = useQuery({ queryKey: ["socials"], queryFn: () => getSocialsFn() });
-  const { data: services = [], isLoading: isServicesLoading } = useQuery({ queryKey: ["services"], queryFn: () => getServicesFn() });
-  const { data: products = [], isLoading: isProductsLoading } = useQuery({ queryKey: ["products"], queryFn: () => getProductsFn() });
+  const loaderData = Route.useLoaderData();
+  const { data: profile, isLoading: isProfileLoading } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => getProfileFn(),
+    initialData: loaderData?.profile ?? undefined,
+  });
+  const { data: socials = [], isLoading: isSocialsLoading } = useQuery({
+    queryKey: ["socials"],
+    queryFn: () => getSocialsFn(),
+    initialData: loaderData?.socials,
+  });
+  const { data: services = [], isLoading: isServicesLoading } = useQuery({
+    queryKey: ["services"],
+    queryFn: () => getServicesFn(),
+    initialData: loaderData?.services,
+  });
+  const { data: products = [], isLoading: isProductsLoading } = useQuery({
+    queryKey: ["products"],
+    queryFn: () => getProductsFn(),
+    initialData: loaderData?.products,
+  });
 
   const [selected, setSelected] = useState<Product | null>(null);
   const [showAvatarLightbox, setShowAvatarLightbox] = useState(false);
 
-  const isLoading = isProfileLoading || isSocialsLoading || isServicesLoading || isProductsLoading;
+  const isLoading = !loaderData && (isProfileLoading || isSocialsLoading || isServicesLoading || isProductsLoading);
 
   if (isLoading) {
     return (
